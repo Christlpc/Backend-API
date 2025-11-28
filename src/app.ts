@@ -16,6 +16,11 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api', routes);
 
+// Root Route
+app.get('/', (req, res) => {
+    res.status(200).json({ message: 'Welcome to Afrigo Backend API' });
+});
+
 // Health Check
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
