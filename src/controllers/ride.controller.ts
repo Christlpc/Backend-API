@@ -126,6 +126,10 @@ export const requestRide = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
+        if (scheduledTime && isNaN(Date.parse(scheduledTime))) {
+            return res.status(400).json({ error: 'Invalid scheduledTime format' });
+        }
+
         const status = scheduledTime ? 'SCHEDULED' : 'REQUESTED';
 
         const ride = await prisma.ride.create({

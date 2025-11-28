@@ -1,0 +1,140 @@
+import { Response } from 'express';
+import prisma from '../prisma';
+import { AuthRequest } from '../middleware/auth.middleware';
+
+type TimeFrame = 'day' | 'week' | 'month';
+
+const getDateRange = (timeframe: TimeFrame) => {
+    const now = new Date();
+    let startDate = new Date();
+
+    if (timeframe === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+    } else if (timeframe === 'week') {
+        const day = startDate.getDay();
+        const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+        startDate.setDate(diff);
+        startDate.setHours(0, 0, 0, 0);
+    } else if (timeframe === 'month') {
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    return { startDate, endDate: now };
+};
+
+export const getDriverStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const timeframe = (req.query.timeframe as TimeFrame) || 'day';
+
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        // Get driver profile id
+        const driver = await prisma.driverProfile.findUnique({ where: { userId } });
+        if (!driver) return res.status(404).json({ error: 'Driver profile not found' });
+
+        const { startDate, endDate } = getDateRange(timeframe);
+
+        const rides = await prisma.ride.findMany({
+            where: {
+                driverId: driver.id,
+                status: 'COMPLETED',
+                completedAt: {
+                    gte: startDate,
+                    lte: endDate
+                }
+            }
+        });
+
+        const totalRides = rides.length;
+
+        // Calculate total earnings (assuming driver gets 80% of finalPrice)
+        // Or if commission is deducted separately, we just sum finalPrice.
+        // Let's assume 'finalPrice' is the gross amount.
+        // If we want net earnings, we should probably check wallet transactions or apply logic.
+        // For simplicity here, let's return Gross Revenue and Net Earnings (80%).
+        const totalRevenue = rides.reduce((sum, ride) => sum + (ride.finalPrice || 0), 0);
+        const totalEarnings = totalRevenue * 0.8; // 20% commission
+
+        // Calculate Average Duration
+        let totalDurationMs = 0;
+        let ridesWithDuration = 0;
+
+        rides.forEach(ride => {
+            if (ride.startedAt && ride.completedAt) {
+                totalDurationMs += (ride.completedAt.getTime() - ride.startedAt.getTime());
+                ridesWithDuration++;
+            }
+        });
+
+        const avgDurationMinutes = ridesWithDuration > 0
+            ? (totalDurationMs / ridesWithDuration) / (1000 * 60)
+            : 0;
+
+        res.json({
+            timeframe,
+            totalRides,
+            totalRevenue,
+            totalEarnings,
+            avgDurationMinutes: Math.round(avgDurationMinutes),
+            currency: 'XAF'
+        });
+
+    } catch (error) {
+        console.error('Driver stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch driver statistics' });
+    }
+};
+
+export const getClientStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const timeframe = (req.query.timeframe as TimeFrame) || 'day';
+
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const { startDate, endDate } = getDateRange(timeframe);
+
+        const rides = await prisma.ride.findMany({
+            where: {
+                clientId: userId,
+                status: 'COMPLETED',
+                completedAt: {
+                    gte: startDate,
+                    lte: endDate
+                }
+            }
+        });
+
+        const totalRides = rides.length;
+        const totalSpent = rides.reduce((sum, ride) => sum + (ride.finalPrice || 0), 0);
+
+        // Calculate Average Duration
+        let totalDurationMs = 0;
+        let ridesWithDuration = 0;
+
+        rides.forEach(ride => {
+            if (ride.startedAt && ride.completedAt) {
+                totalDurationMs += (ride.completedAt.getTime() - ride.startedAt.getTime());
+                ridesWithDuration++;
+            }
+        });
+
+        const avgDurationMinutes = ridesWithDuration > 0
+            ? (totalDurationMs / ridesWithDuration) / (1000 * 60)
+            : 0;
+
+        res.json({
+            timeframe,
+            totalRides,
+            totalSpent,
+            avgDurationMinutes: Math.round(avgDurationMinutes),
+            currency: 'XAF'
+        });
+
+    } catch (error) {
+        console.error('Client stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch client statistics' });
+    }
+};

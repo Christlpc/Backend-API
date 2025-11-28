@@ -6,6 +6,7 @@ import * as supportController from '../controllers/support.controller';
 import * as safetyController from '../controllers/safety.controller';
 import * as walletController from '../controllers/wallet.controller';
 import * as addressController from '../controllers/address.controller';
+import * as statsController from '../controllers/stats.controller';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -50,5 +51,9 @@ router.post('/addresses', authenticate, addressController.addAddress);
 router.get('/addresses', authenticate, addressController.getAddresses);
 router.put('/addresses/:id', authenticate, addressController.updateAddress);
 router.delete('/addresses/:id', authenticate, addressController.deleteAddress);
+
+// Statistics Routes
+router.get('/stats/driver', authenticate, statsController.getDriverStats);
+router.get('/stats/client', authenticate, statsController.getClientStats);
 
 export default router;

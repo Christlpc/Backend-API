@@ -103,6 +103,9 @@ model Ride {
   // VIP Info
   vipTier       String?  // Business, Luxury, XL
 
+  startedAt     DateTime?
+  completedAt   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   

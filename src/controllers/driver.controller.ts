@@ -135,9 +135,16 @@ export const updateRideStatus = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Ride not found or not assigned to you' });
         }
 
+        const updateData: any = { status };
+        if (status === 'IN_PROGRESS') {
+            updateData.startedAt = new Date();
+        } else if (status === 'COMPLETED') {
+            updateData.completedAt = new Date();
+        }
+
         const updatedRide = await prisma.ride.update({
             where: { id: Number(id) },
-            data: { status }
+            data: updateData
         });
 
         // If completed, process payment
