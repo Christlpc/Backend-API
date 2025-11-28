@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  DRIVER
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  email     String?  @unique
+  password  String?  // Nullable for OTP-only flows initially, but good to have
+  firstName String?
+  lastName  String?
+  role      UserRole @default(CLIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  driverProfile DriverProfile?
+  ridesAsClient Ride[] @relation("ClientRides")
+  reviewsGiven  Review[]
+  supportTickets SupportTicket[]
+  emergencyContacts EmergencyContact[]
+  wallet        Wallet?
+  savedAddresses SavedAddress[]
+}
+
+model DriverProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  licenseNumber String?
+  isAvailable Boolean @default(false)
+  currentLat  Float?
+  currentLng  Float?
+  
+  // Relations
+  vehicle   Vehicle?
+  ridesAsDriver Ride[] @relation("DriverRides")
+  reviewsReceived Review[]
+}
+
+enum ServiceType {
+  TAXI
+  MOTO
+  CONFORT
+  VIP
+}
+
+model Vehicle {
+  id        Int      @id @default(autoincrement())
+  driverId  Int      @unique
+  driver    DriverProfile @relation(fields: [driverId], references: [id])
+  make      String
+  model     String
+  year      Int
+  color     String
+  plateNumber String
+  type      ServiceType
+}
+
+model Ride {
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  client    User     @relation("ClientRides", fields: [clientId], references: [id])
+  driverId  Int?
+  driver    DriverProfile? @relation("DriverRides", fields: [driverId], references: [id])
+  
+  originLat Float
+  originLng Float
+  originAddress String
+  
+  destLat   Float
+  destLng   Float
+  destAddress String
+  
+  status    String   // REQUESTED, ACCEPTED, IN_PROGRESS, COMPLETED, CANCELLED
+  serviceType ServiceType
+  estimatedPrice Float
+  finalPrice Float?
+  
+  // Advanced Features
+  passengerName String?
+  passengerPhone String?
+  scheduledTime DateTime?
+
+  // Payment Info
+  paymentMethod String?  // CASH, WALLET, MOBILE_MONEY, PAYPAL, CB
+  paymentStatus String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  
+  // VIP Info
+  vipTier       String?  // Business, Luxury, XL
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  reviews   Review[]
+}
+
+model PricingConfig {
+  id          Int      @id @default(autoincrement())
+  serviceType ServiceType @unique
+  basePrice   Float
+  pricePerKm  Float
+  pricePerMin Float
+  fuelIndex   Float    @default(1.0)
+  updatedAt   DateTime @updatedAt
+}
+
+model SavedAddress {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  label       String   // e.g., Home, Work
+  addressText String
+  latitude    Float
+  longitude   Float
+  landmark    String?
+  details     String?  // e.g., Floor, Gate Code
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rideId    Int      @unique
+  ride      Ride     @relation(fields: [rideId], references: [id])
+  rating    Int
+  comment   String?
+  reviewerId Int
+  reviewer  User     @relation(fields: [reviewerId], references: [id])
+  driverId  Int
+  driver    DriverProfile @relation(fields: [driverId], references: [id])
+}
+
+model SupportTicket {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  subject     String
+  description String
+  category    String
+  status      String   @default("OPEN") // OPEN, CLOSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmergencyContact {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  phone     String
+  createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Float    @default(0)
+  transactions Transaction[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  walletId  Int
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  amount    Float
+  type      String   // DEPOSIT, WITHDRAWAL, RIDE_PAYMENT, RIDE_EARNING
+  status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt DateTime @default(now())
+}

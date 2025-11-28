@@ -1,0 +1,6 @@
+node_modules
+dist
+.env
+documentation/node_modules
+documentation/build
+.DS_Store
