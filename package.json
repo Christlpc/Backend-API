@@ -6,10 +6,11 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "build:docs": "cd documentation && npm run build",
-    "build:full": "npm run build:docs && npm run build",
-    "prebuild": "npm run build:docs",
+    "build": "npm run build:api",
+    "build:api": "npx prisma generate && tsc",
+    "build:docs": "cd documentation && npm install && npm run build",
+    "build:full": "npm run build:docs && npm run build:api",
+    "postinstall": "npx prisma generate",
     "test": "jest",
     "lint": "eslint . --ext .ts"
   },
