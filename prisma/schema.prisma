@@ -16,8 +16,22 @@ enum UserRole {
   ADMIN
 }
 
+enum DocumentType {
+  DRIVERS_LICENSE      // Permis de conduire
+  INSURANCE            // Assurance
+  VEHICLE_REGISTRATION // Carte grise
+  TECHNICAL_INSPECTION // Contrôle technique
+  DRIVER_PHOTO         // Photo du chauffeur
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   phone     String   @unique
   email     String?  @unique
   password  String?  // Nullable for OTP-only flows initially, but good to have
@@ -26,6 +40,18 @@ model User {
   role      UserRole @default(CLIENT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Admin Management
+  isActive      Boolean   @default(true)
+  suspendedAt   DateTime?
+  suspendReason String?
+
+  // Rating & Reputation (for clients)
+  averageRating         Float   @default(5.0)
+  totalRatings          Int     @default(0)
+  consecutiveBadRatings Int     @default(0)
+  reputationStatus      String  @default("GOOD") // GOOD, WARNING, RED_ZONE, SUSPENDED
+  lastRatingCheck       DateTime?
 
   // Relations
   driverProfile DriverProfile?
@@ -38,16 +64,31 @@ model User {
 }
 
 model DriverProfile {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
+  id        String   @id @default(cuid())
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   licenseNumber String?
   isAvailable Boolean @default(false)
   currentLat  Float?
   currentLng  Float?
   
+  // Onboarding Status
+  onboardingStatus String @default("PENDING") // PENDING, DOCUMENTS_SUBMITTED, APPROVED, REJECTED
+  
+  // Admin Approval
+  isApproved  Boolean   @default(false)
+  approvedAt  DateTime?
+  approvedBy  String?
+
+  // Rating & Reputation
+  averageRating         Float   @default(5.0)
+  totalRatings          Int     @default(0)
+  consecutiveBadRatings Int     @default(0)
+  reputationStatus      String  @default("GOOD") // GOOD, WARNING, RED_ZONE, SUSPENDED
+
   // Relations
   vehicle   Vehicle?
+  documents DriverDocument[]
   ridesAsDriver Ride[] @relation("DriverRides")
   reviewsReceived Review[]
 }
@@ -60,8 +101,8 @@ enum ServiceType {
 }
 
 model Vehicle {
-  id        Int      @id @default(autoincrement())
-  driverId  Int      @unique
+  id        String   @id @default(cuid())
+  driverId  String   @unique
   driver    DriverProfile @relation(fields: [driverId], references: [id])
   make      String
   model     String
@@ -72,10 +113,10 @@ model Vehicle {
 }
 
 model Ride {
-  id        Int      @id @default(autoincrement())
-  clientId  Int
+  id        String   @id @default(cuid())
+  clientId  String
   client    User     @relation("ClientRides", fields: [clientId], references: [id])
-  driverId  Int?
+  driverId  String?
   driver    DriverProfile? @relation("DriverRides", fields: [driverId], references: [id])
   
   originLat Float
@@ -96,6 +137,18 @@ model Ride {
   passengerPhone String?
   scheduledTime DateTime?
 
+  // Pricing & Billing
+  supplements   Json?    // e.g. { "meetAndGreet": true, "babySeat": true }
+  waitingTime   Int?     // Actual waiting time in minutes
+  waitingPrice  Float?   // Calculated waiting fee
+  cancellationFee Float? // Applied if cancelled late
+  billTo        String   @default("CLIENT") // CLIENT or PASSENGER
+  
+  // Pricing Factors (Stored for history)
+  weatherFactor Float    @default(1.0)
+  trafficFactor Float    @default(1.0)
+  fuelIndex     Float    @default(1.0)
+
   // Payment Info
   paymentMethod String?  // CASH, WALLET, MOBILE_MONEY, PAYPAL, CB
   paymentStatus String   @default("PENDING") // PENDING, COMPLETED, FAILED
@@ -110,21 +163,29 @@ model Ride {
   updatedAt DateTime @updatedAt
   
   reviews   Review[]
+  rideRatings RideRating[]
 }
 
 model PricingConfig {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(cuid())
   serviceType ServiceType @unique
   basePrice   Float
   pricePerKm  Float
   pricePerMin Float
   fuelIndex   Float    @default(1.0)
+  
+  // Advanced Pricing
+  waitingPricePerMin Float @default(50)
+  freeWaitingMinutes Int   @default(5)
+  cancellationFee    Float @default(500)
+  minPrice           Float @default(1000) // Plancher
+
   updatedAt   DateTime @updatedAt
 }
 
 model SavedAddress {
-  id          Int      @id @default(autoincrement())
-  userId      Int
+  id          String   @id @default(cuid())
+  userId      String
   user        User     @relation(fields: [userId], references: [id])
   label       String   // e.g., Home, Work
   addressText String
@@ -137,20 +198,20 @@ model SavedAddress {
 }
 
 model Review {
-  id        Int      @id @default(autoincrement())
-  rideId    Int      @unique
+  id        String   @id @default(cuid())
+  rideId    String   @unique
   ride      Ride     @relation(fields: [rideId], references: [id])
   rating    Int
   comment   String?
-  reviewerId Int
+  reviewerId String
   reviewer  User     @relation(fields: [reviewerId], references: [id])
-  driverId  Int
+  driverId  String
   driver    DriverProfile @relation(fields: [driverId], references: [id])
 }
 
 model SupportTicket {
-  id          Int      @id @default(autoincrement())
-  userId      Int
+  id          String   @id @default(cuid())
+  userId      String
   user        User     @relation(fields: [userId], references: [id])
   subject     String
   description String
@@ -161,17 +222,18 @@ model SupportTicket {
 }
 
 model EmergencyContact {
-  id        Int      @id @default(autoincrement())
-  userId    Int
+  id        String   @id @default(cuid())
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
   name      String
   phone     String
+  relationship String?
   createdAt DateTime @default(now())
 }
 
 model Wallet {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
+  id        String   @id @default(cuid())
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   balance   Float    @default(0)
   transactions Transaction[]
@@ -180,11 +242,66 @@ model Wallet {
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  walletId  Int
+  id        String   @id @default(cuid())
+  walletId  String
   wallet    Wallet   @relation(fields: [walletId], references: [id])
   amount    Float
   type      String   // DEPOSIT, WITHDRAWAL, RIDE_PAYMENT, RIDE_EARNING
   status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  description String?
   createdAt DateTime @default(now())
+}
+
+model DriverDocument {
+  id             String         @id @default(cuid())
+  driverId       String
+  driver         DriverProfile  @relation(fields: [driverId], references: [id])
+  
+  type           DocumentType
+  documentNumber String?        // Numéro du document
+  expiryDate     DateTime?      // Date de validité
+  photoUrl       String         // URL de la photo du document
+  
+  status         DocumentStatus @default(PENDING)
+  rejectionReason String?       // Raison si rejeté
+  reviewedAt     DateTime?
+  reviewedBy     String?        // Admin ID
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  @@unique([driverId, type]) // Un seul document par type par chauffeur
+}
+
+// Bidirectional Rating System
+model RideRating {
+  id        String   @id @default(cuid())
+  rideId    String
+  ride      Ride     @relation(fields: [rideId], references: [id])
+  
+  // Who gives the rating
+  raterId   String
+  raterType String   // CLIENT or DRIVER
+  
+  // Who receives the rating
+  rateeId   String
+  rateeType String   // CLIENT or DRIVER
+  
+  rating    Int      // 1-5 stars
+  comment   String?
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([rideId, raterType]) // One rating per type per ride
+}
+
+// Rating Configuration (Admin configurable)
+model RatingConfig {
+  id                   String   @id @default(cuid())
+  badRatingThreshold   Int      @default(2)    // Rating <= this is "bad"
+  warningThreshold     Int      @default(2)    // X bad ratings = WARNING
+  redZoneThreshold     Int      @default(3)    // X bad ratings = RED_ZONE
+  autoSuspendThreshold Int      @default(5)    // X bad ratings = SUSPENDED
+  evaluationPeriod     Int      @default(10)   // Last X rides to evaluate
+  updatedAt            DateTime @updatedAt
 }

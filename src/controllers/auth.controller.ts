@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma';
+import { handleControllerError } from '../utils/errorHandler';
+import { normalizePhone, isValidPhone } from '../utils/phoneUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -13,10 +15,16 @@ export const register = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Phone and password are required' });
         }
 
+        const normalizedPhone = normalizePhone(phone);
+
+        if (!isValidPhone(normalizedPhone)) {
+            return res.status(400).json({ error: 'Invalid phone number format' });
+        }
+
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { phone },
+                    { phone: normalizedPhone },
                     { email: email || undefined }
                 ]
             }
@@ -30,7 +38,7 @@ export const register = async (req: Request, res: Response) => {
 
         const user = await prisma.user.create({
             data: {
-                phone,
+                phone: normalizedPhone,
                 email,
                 password: hashedPassword,
                 firstName,
@@ -38,12 +46,9 @@ export const register = async (req: Request, res: Response) => {
             },
         });
 
-        // Create a token immediately upon registration? Or require login?
-        // Let's return success for now.
         res.status(201).json({ message: 'User registered successfully', userId: user.id });
     } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ error: 'Registration failed' });
+        handleControllerError(res, error, 'Registration failed');
     }
 };
 
@@ -55,8 +60,10 @@ export const login = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Phone and password are required' });
         }
 
+        const normalizedPhone = normalizePhone(phone);
+
         const user = await prisma.user.findUnique({
-            where: { phone },
+            where: { phone: normalizedPhone },
         });
 
         if (!user || !user.password) {
@@ -88,7 +95,6 @@ export const login = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
+        handleControllerError(res, error, 'Login failed');
     }
 };

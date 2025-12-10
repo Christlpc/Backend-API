@@ -1,0 +1,1297 @@
+{
+    "info": {
+        "_postman_id": "afrigo-backend-api",
+        "name": "Afrigo Backend API",
+        "description": "Collection complète pour tester l'API Afrigo Backend",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000/api",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "adminToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "rideId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "driverId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "userId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "documentId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('token', jsonData.token);",
+                                    "    pm.collectionVariables.set('userId', jsonData.user.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"phone\": \"+242064000001\",\n  \"email\": \"test@afrigo.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('token', jsonData.token);",
+                                    "    pm.collectionVariables.set('userId', jsonData.user.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"phone\": \"+242064000001\",\n  \"password\": \"Password123!\"\n}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Login Admin",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('adminToken', jsonData.token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"phone\": \"+242064000000\",\n  \"password\": \"AdminPassword123!\"\n}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/profile"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Rides",
+            "item": [
+                {
+                    "name": "Estimate Ride",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"originLat\": -4.2634,\n  \"originLng\": 15.2429,\n  \"destLat\": -4.2834,\n  \"destLng\": 15.2629,\n  \"serviceType\": \"TAXI\"\n}"
+                        },
+                        "url": "{{baseUrl}}/rides/estimate"
+                    }
+                },
+                {
+                    "name": "Request Ride",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('rideId', jsonData.ride.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"originLat\": -4.2634,\n  \"originLng\": 15.2429,\n  \"originAddress\": \"Centre-ville Brazzaville\",\n  \"destLat\": -4.2834,\n  \"destLng\": 15.2629,\n  \"destAddress\": \"Aéroport Maya-Maya\",\n  \"serviceType\": \"TAXI\",\n  \"estimatedPrice\": 2500,\n  \"paymentMethod\": \"CASH\"\n}"
+                        },
+                        "url": "{{baseUrl}}/rides/request"
+                    }
+                },
+                {
+                    "name": "Rate Driver",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent service!\"\n}"
+                        },
+                        "url": "{{baseUrl}}/rides/{{rideId}}/rate-driver"
+                    }
+                },
+                {
+                    "name": "Get Ride Ratings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/rides/{{rideId}}/ratings"
+                    }
+                },
+                {
+                    "name": "Get My Ratings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/ratings/my"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Driver Operations",
+            "item": [
+                {
+                    "name": "Register as Driver",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/register"
+                    }
+                },
+                {
+                    "name": "Submit Document - License",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set('documentId', jsonData.document.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"DRIVERS_LICENSE\",\n  \"documentNumber\": \"DL-123456\",\n  \"expiryDate\": \"2026-12-31\",\n  \"photoUrl\": \"https://example.com/license.jpg\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Submit Document - Insurance",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"INSURANCE\",\n  \"documentNumber\": \"INS-789012\",\n  \"expiryDate\": \"2025-06-30\",\n  \"photoUrl\": \"https://example.com/insurance.jpg\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Submit Document - Vehicle Registration",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"VEHICLE_REGISTRATION\",\n  \"documentNumber\": \"CG-345678\",\n  \"expiryDate\": \"2027-01-15\",\n  \"photoUrl\": \"https://example.com/carte-grise.jpg\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Submit Document - Technical Inspection",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"TECHNICAL_INSPECTION\",\n  \"documentNumber\": \"CT-901234\",\n  \"expiryDate\": \"2025-03-20\",\n  \"photoUrl\": \"https://example.com/controle-technique.jpg\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Submit Document - Driver Photo",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"DRIVER_PHOTO\",\n  \"photoUrl\": \"https://example.com/driver-photo.jpg\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Get My Documents",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/documents"
+                    }
+                },
+                {
+                    "name": "Get Onboarding Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/onboarding-status"
+                    }
+                },
+                {
+                    "name": "Add Vehicle",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"make\": \"Toyota\",\n  \"model\": \"Corolla\",\n  \"year\": 2020,\n  \"color\": \"Blanc\",\n  \"plateNumber\": \"AB 1234 CD\",\n  \"type\": \"TAXI\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/vehicle"
+                    }
+                },
+                {
+                    "name": "Get Vehicle",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/vehicle"
+                    }
+                },
+                {
+                    "name": "Toggle Availability",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"isAvailable\": true\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/availability"
+                    }
+                },
+                {
+                    "name": "Update Location",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"latitude\": -4.2634,\n  \"longitude\": 15.2429\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/location"
+                    }
+                },
+                {
+                    "name": "Get Available Rides",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/rides/available"
+                    }
+                },
+                {
+                    "name": "Accept Ride",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/driver/rides/{{rideId}}/accept"
+                    }
+                },
+                {
+                    "name": "Update Ride Status",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+                        },
+                        "url": "{{baseUrl}}/driver/rides/{{rideId}}/status"
+                    }
+                },
+                {
+                    "name": "Rate Client",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Bon client\"\n}"
+                        },
+                        "url": "{{baseUrl}}/rides/{{rideId}}/rate-client"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Wallet",
+            "item": [
+                {
+                    "name": "Get Balance",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/wallet"
+                    }
+                },
+                {
+                    "name": "Deposit",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 10000\n}"
+                        },
+                        "url": "{{baseUrl}}/wallet/deposit"
+                    }
+                },
+                {
+                    "name": "Withdraw",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 5000\n}"
+                        },
+                        "url": "{{baseUrl}}/wallet/withdraw"
+                    }
+                },
+                {
+                    "name": "Get Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/wallet/transactions"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Addresses",
+            "item": [
+                {
+                    "name": "Add Address",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"label\": \"Domicile\",\n  \"addressText\": \"123 Rue Principale, Brazzaville\",\n  \"latitude\": -4.2634,\n  \"longitude\": 15.2429\n}"
+                        },
+                        "url": "{{baseUrl}}/addresses"
+                    }
+                },
+                {
+                    "name": "Get Addresses",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/addresses"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Statistics",
+            "item": [
+                {
+                    "name": "Get Driver Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/stats/driver?timeframe=week",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "stats",
+                                "driver"
+                            ],
+                            "query": [
+                                {
+                                    "key": "timeframe",
+                                    "value": "week"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Client Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/stats/client?timeframe=month",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "stats",
+                                "client"
+                            ],
+                            "query": [
+                                {
+                                    "key": "timeframe",
+                                    "value": "month"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Support & Safety",
+            "item": [
+                {
+                    "name": "Create Ticket",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"subject\": \"Problème de paiement\",\n  \"description\": \"Je n'ai pas pu payer ma course\",\n  \"category\": \"PAYMENT\"\n}"
+                        },
+                        "url": "{{baseUrl}}/support/tickets"
+                    }
+                },
+                {
+                    "name": "Get Tickets",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/support/tickets"
+                    }
+                },
+                {
+                    "name": "Add Emergency Contact",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Maman\",\n  \"phone\": \"+242069000000\",\n  \"relationship\": \"Mère\"\n}"
+                        },
+                        "url": "{{baseUrl}}/safety/contacts"
+                    }
+                },
+                {
+                    "name": "Get Emergency Contacts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/safety/contacts"
+                    }
+                },
+                {
+                    "name": "Trigger SOS",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"latitude\": -4.2634,\n  \"longitude\": 15.2429,\n  \"rideId\": \"{{rideId}}\"\n}"
+                        },
+                        "url": "{{baseUrl}}/safety/sos"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Backoffice (Admin)",
+            "item": [
+                {
+                    "name": "Users",
+                    "item": [
+                        {
+                            "name": "Get All Users",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/backoffice/users?page=1&limit=20",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "backoffice",
+                                        "users"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "page",
+                                            "value": "1"
+                                        },
+                                        {
+                                            "key": "limit",
+                                            "value": "20"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get User By ID",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/users/{{userId}}"
+                            }
+                        },
+                        {
+                            "name": "Toggle User Status",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"reason\": \"Violation des conditions d'utilisation\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/users/{{userId}}/status"
+                            }
+                        },
+                        {
+                            "name": "Change User Role",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"role\": \"ADMIN\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/users/{{userId}}/role"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Drivers",
+                    "item": [
+                        {
+                            "name": "Get All Drivers",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/drivers"
+                            }
+                        },
+                        {
+                            "name": "Get Driver Details",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/drivers/{{driverId}}"
+                            }
+                        },
+                        {
+                            "name": "Approve Driver",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/drivers/{{driverId}}/approve"
+                            }
+                        },
+                        {
+                            "name": "Suspend Driver",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"reason\": \"Comportement inapproprié\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/drivers/{{driverId}}/suspend"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Documents",
+                    "item": [
+                        {
+                            "name": "Get Pending Documents",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/documents/pending"
+                            }
+                        },
+                        {
+                            "name": "Review Document - Approve",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"action\": \"APPROVE\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/documents/{{documentId}}/review"
+                            }
+                        },
+                        {
+                            "name": "Review Document - Reject",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"action\": \"REJECT\",\n  \"rejectionReason\": \"Document illisible\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/documents/{{documentId}}/review"
+                            }
+                        },
+                        {
+                            "name": "Get Driver Documents",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/drivers/{{driverId}}/documents"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Ratings",
+                    "item": [
+                        {
+                            "name": "Get Red Zone Users",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/ratings/red-zone"
+                            }
+                        },
+                        {
+                            "name": "Get User Reputation",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/users/{{userId}}/reputation"
+                            }
+                        },
+                        {
+                            "name": "Reset User Reputation",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"resetClient\": true,\n  \"resetDriver\": true,\n  \"reactivate\": true\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/users/{{userId}}/reputation/reset"
+                            }
+                        },
+                        {
+                            "name": "Get Rating Config",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/ratings/config"
+                            }
+                        },
+                        {
+                            "name": "Update Rating Config",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"badRatingThreshold\": 2,\n  \"warningThreshold\": 2,\n  \"redZoneThreshold\": 3,\n  \"autoSuspendThreshold\": 5,\n  \"evaluationPeriod\": 10\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/ratings/config"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Statistics",
+                    "item": [
+                        {
+                            "name": "Get Platform Stats",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/stats"
+                            }
+                        },
+                        {
+                            "name": "Get Revenue Stats",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/backoffice/stats/revenue?period=week",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "backoffice",
+                                        "stats",
+                                        "revenue"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "period",
+                                            "value": "week"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Active Drivers Map",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/stats/drivers-map"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Rides",
+                    "item": [
+                        {
+                            "name": "Get All Rides",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/rides"
+                            }
+                        },
+                        {
+                            "name": "Get Ride Details",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/rides/{{rideId}}"
+                            }
+                        },
+                        {
+                            "name": "Cancel Ride",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"reason\": \"Annulation administrative\"\n}"
+                                },
+                                "url": "{{baseUrl}}/backoffice/rides/{{rideId}}/cancel"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Transactions",
+                    "item": [
+                        {
+                            "name": "Get All Transactions",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/transactions"
+                            }
+                        },
+                        {
+                            "name": "Get Transaction Details",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{adminToken}}"
+                                    }
+                                ],
+                                "url": "{{baseUrl}}/backoffice/transactions/{{transactionId}}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

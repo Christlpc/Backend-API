@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { handleControllerError } from '../utils/errorHandler';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
@@ -30,7 +31,6 @@ export const getDriverStats = async (req: AuthRequest, res: Response) => {
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        // Get driver profile id
         const driver = await prisma.driverProfile.findUnique({ where: { userId } });
         if (!driver) return res.status(404).json({ error: 'Driver profile not found' });
 
@@ -48,16 +48,9 @@ export const getDriverStats = async (req: AuthRequest, res: Response) => {
         });
 
         const totalRides = rides.length;
-
-        // Calculate total earnings (assuming driver gets 80% of finalPrice)
-        // Or if commission is deducted separately, we just sum finalPrice.
-        // Let's assume 'finalPrice' is the gross amount.
-        // If we want net earnings, we should probably check wallet transactions or apply logic.
-        // For simplicity here, let's return Gross Revenue and Net Earnings (80%).
         const totalRevenue = rides.reduce((sum, ride) => sum + (ride.finalPrice || 0), 0);
         const totalEarnings = totalRevenue * 0.8; // 20% commission
 
-        // Calculate Average Duration
         let totalDurationMs = 0;
         let ridesWithDuration = 0;
 
@@ -80,10 +73,8 @@ export const getDriverStats = async (req: AuthRequest, res: Response) => {
             avgDurationMinutes: Math.round(avgDurationMinutes),
             currency: 'XAF'
         });
-
     } catch (error) {
-        console.error('Driver stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch driver statistics' });
+        handleControllerError(res, error, 'Failed to fetch driver stats');
     }
 };
 
@@ -110,7 +101,6 @@ export const getClientStats = async (req: AuthRequest, res: Response) => {
         const totalRides = rides.length;
         const totalSpent = rides.reduce((sum, ride) => sum + (ride.finalPrice || 0), 0);
 
-        // Calculate Average Duration
         let totalDurationMs = 0;
         let ridesWithDuration = 0;
 
@@ -132,9 +122,7 @@ export const getClientStats = async (req: AuthRequest, res: Response) => {
             avgDurationMinutes: Math.round(avgDurationMinutes),
             currency: 'XAF'
         });
-
     } catch (error) {
-        console.error('Client stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch client statistics' });
+        handleControllerError(res, error, 'Failed to fetch client stats');
     }
 };

@@ -1,29 +1,24 @@
 import { Response } from 'express';
 import prisma from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { normalizePhone } from '../utils/phoneUtils';
+import { handleControllerError } from '../utils/errorHandler';
 
 export const addEmergencyContact = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
-        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
         const { name, phone } = req.body;
-        if (!name || !phone) {
-            return res.status(400).json({ error: 'Name and phone are required' });
-        }
+
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!name || !phone) return res.status(400).json({ error: 'Name and phone required' });
 
         const contact = await prisma.emergencyContact.create({
-            data: {
-                userId,
-                name,
-                phone,
-            }
+            data: { userId, name, phone: normalizePhone(phone) }
         });
 
         res.status(201).json({ message: 'Contact added', contact });
     } catch (error) {
-        console.error('Add contact error:', error);
-        res.status(500).json({ error: 'Failed to add contact' });
+        handleControllerError(res, error, 'Failed to add contact');
     }
 };
 
@@ -38,29 +33,32 @@ export const getEmergencyContacts = async (req: AuthRequest, res: Response) => {
 
         res.json({ contacts });
     } catch (error) {
-        console.error('Get contacts error:', error);
-        res.status(500).json({ error: 'Failed to fetch contacts' });
+        handleControllerError(res, error, 'Failed to fetch contacts');
     }
 };
 
 export const triggerSOS = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
+        const { latitude, longitude } = req.body;
+
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        const { lat, lng } = req.body;
+        // In a real app, this would integrate with SMS/Push notifications
+        // For now, we just log it and return success
+        console.log(`SOS Triggered by user ${userId} at ${latitude}, ${longitude}`);
 
-        // In a real app, this would send SMS/Push to contacts
         const contacts = await prisma.emergencyContact.findMany({
             where: { userId }
         });
 
-        console.log(`[SOS TRIGGERED] User ${userId} at ${lat}, ${lng}`);
-        console.log(`[SOS NOTIFYING] ${contacts.length} contacts`);
+        // Simulate sending alerts
+        contacts.forEach(contact => {
+            console.log(`Alerting ${contact.name} (${contact.phone})...`);
+        });
 
-        res.json({ message: 'SOS alert sent', notifiedCount: contacts.length });
+        res.json({ message: 'SOS Alert sent', contactsAlerted: contacts.length });
     } catch (error) {
-        console.error('SOS error:', error);
-        res.status(500).json({ error: 'Failed to trigger SOS' });
+        handleControllerError(res, error, 'Failed to trigger SOS');
     }
 };

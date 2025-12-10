@@ -1,66 +1,93 @@
 ---
 sidebar_position: 5
+title: Wallet
+description: Financial transactions and balance
 ---
 
-# Wallet System
+# Wallet
+
+Manage user funds and transactions.
 
 ## Get Balance
-Get the current user's wallet balance.
 
-- **URL**: `/api/wallet`
-- **Method**: `GET`
-- **Headers**: `Authorization: Bearer <token>`
-- **Response**:
-  ```json
-  {
-    "balance": 5000,
-    "currency": "XAF"
-  }
-  ```
+Retrieve current wallet balance.
+
+<span class="badge badge--primary">GET</span> `/api/wallet`
+
+### Response
+
+```json
+{
+  "balance": 15000
+}
+```
+
+---
 
 ## Deposit Funds
-Add funds to the wallet (Client only).
 
-- **URL**: `/api/wallet/deposit`
-- **Method**: `POST`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**:
-  ```json
-  {
-    "amount": 10000
-  }
-  ```
+Add funds to the wallet (Clients only).
+
+<span class="badge badge--success">POST</span> `/api/wallet/deposit`
+
+### Request Body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `amount` | number | Yes | Amount to deposit (must be positive) |
+
+### Response
+
+```json
+{
+  "message": "Deposit successful",
+  "balance": 20000
+}
+```
+
+---
 
 ## Withdraw Funds
-Withdraw funds from the wallet (Driver only).
 
-- **URL**: `/api/wallet/withdraw`
-- **Method**: `POST`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**:
-  ```json
-  {
-    "amount": 5000
-  }
-  ```
+Withdraw funds from the wallet (Drivers only).
+
+<span class="badge badge--success">POST</span> `/api/wallet/withdraw`
+
+### Request Body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `amount` | number | Yes | Amount to withdraw |
+
+### Response
+
+```json
+{
+  "message": "Withdrawal successful",
+  "balance": 5000
+}
+```
+
+---
 
 ## Transaction History
-Get a list of past transactions.
 
-- **URL**: `/api/wallet/transactions`
-- **Method**: `GET`
-- **Headers**: `Authorization: Bearer <token>`
-- **Response**:
-  ```json
-  {
-    "transactions": [
-      {
-        "id": 1,
-        "amount": 1000,
-        "type": "DEPOSIT", // DEPOSIT, WITHDRAWAL, RIDE_PAYMENT, RIDE_EARNING
-        "status": "COMPLETED",
-        "createdAt": "2025-11-28T10:00:00Z"
-      }
-    ]
-  }
-  ```
+List all wallet transactions.
+
+<span class="badge badge--primary">GET</span> `/api/wallet/transactions`
+
+### Response
+
+```json
+{
+  "transactions": [
+    {
+      "id": 1,
+      "amount": 5000,
+      "type": "DEPOSIT",
+      "status": "COMPLETED",
+      "createdAt": "2023-10-27T10:00:00.000Z"
+    }
+  ]
+}
+```

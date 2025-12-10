@@ -2,7 +2,7 @@ import prisma from '../prisma';
 
 const COMMISSION_RATE = 0.20; // 20%
 
-export const processPayment = async (rideId: number) => {
+export const processPayment = async (rideId: string) => {
     try {
         const ride = await prisma.ride.findUnique({
             where: { id: rideId },

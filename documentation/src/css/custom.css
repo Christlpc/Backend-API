@@ -1,30 +1,84 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Afrigo Backend Documentation Theme
  */
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  /* Afrigo Green Palette */
+  --ifm-color-primary: #00A651;
+  --ifm-color-primary-dark: #009549;
+  --ifm-color-primary-darker: #008d45;
+  --ifm-color-primary-darkest: #007439;
+  --ifm-color-primary-light: #26b773;
+  --ifm-color-primary-lighter: #39c07f;
+  --ifm-color-primary-lightest: #6fd6a3;
+  
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  
+  /* Typography */
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Dark Mode Overrides */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
+  --ifm-color-primary: #00A651;
+  --ifm-color-primary-dark: #26b773;
+  --ifm-color-primary-darker: #39c07f;
+  --ifm-color-primary-darkest: #6fd6a3;
+  --ifm-color-primary-light: #009549;
+  --ifm-color-primary-lighter: #008d45;
+  --ifm-color-primary-lightest: #007439;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* API Method Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.6em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  margin-right: 8px;
+  color: #fff;
+}
+
+.badge--primary {
+  background-color: #007bff; /* GET - Blue */
+}
+
+.badge--success {
+  background-color: #28a745; /* POST - Green */
+}
+
+.badge--warning {
+  background-color: #ffc107; /* PUT - Yellow */
+  color: #212529;
+}
+
+.badge--danger {
+  background-color: #dc3545; /* DELETE - Red */
+}
+
+/* Table Styling */
+table {
+  display: table;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+th {
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+/* Navbar Styling */
+.navbar {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.navbar__title {
+  font-weight: 700;
 }

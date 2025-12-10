@@ -5,7 +5,7 @@ import { getIO } from '../socket';
 import { processPayment } from './payment.controller';
 
 // Helper to ensure user is a driver
-const ensureDriver = async (userId: number) => {
+const ensureDriver = async (userId: string) => {
     const driver = await prisma.driverProfile.findUnique({
         where: { userId },
     });
@@ -18,45 +18,47 @@ const ensureDriver = async (userId: number) => {
     return driver;
 };
 
+import { handleControllerError } from '../utils/errorHandler';
+
 export const toggleAvailability = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        const { isAvailable } = req.body;
-        let driver = await ensureDriver(userId);
+        const driver = await prisma.driverProfile.findUnique({ where: { userId } });
+        if (!driver) return res.status(404).json({ error: 'Driver profile not found' });
 
-        driver = await prisma.driverProfile.update({
-            where: { id: driver.id },
-            data: { isAvailable },
+        const updatedDriver = await prisma.driverProfile.update({
+            where: { userId },
+            data: { isAvailable: !driver.isAvailable }
         });
 
-        res.json({ message: 'Availability updated', isAvailable: driver.isAvailable });
+        res.json({ message: 'Availability updated', isAvailable: updatedDriver.isAvailable });
     } catch (error) {
-        console.error('Availability error:', error);
-        res.status(500).json({ error: 'Failed to update availability' });
+        handleControllerError(res, error, 'Failed to toggle availability');
     }
 };
 
 export const updateLocation = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
+        const { latitude, longitude } = req.body;
+
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!latitude || !longitude) return res.status(400).json({ error: 'Missing coordinates' });
 
-        const { lat, lng } = req.body;
-        if (!lat || !lng) return res.status(400).json({ error: 'Coordinates required' });
-
-        let driver = await ensureDriver(userId);
-
-        driver = await prisma.driverProfile.update({
-            where: { id: driver.id },
-            data: { currentLat: lat, currentLng: lng },
+        await prisma.driverProfile.update({
+            where: { userId },
+            data: {
+                currentLat: latitude,
+                currentLng: longitude
+                // lastLocationUpdate not in schema, removing
+            }
         });
 
         res.json({ message: 'Location updated' });
     } catch (error) {
-        console.error('Location error:', error);
-        res.status(500).json({ error: 'Failed to update location' });
+        handleControllerError(res, error, 'Failed to update location');
     }
 };
 
@@ -65,7 +67,8 @@ export const getAvailableRides = async (req: AuthRequest, res: Response) => {
         const userId = req.user?.userId;
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        // In a real app, filter by location radius
+        // Simple logic: return all REQUESTED rides
+        // In real app: Filter by radius
         const rides = await prisma.ride.findMany({
             where: { status: 'REQUESTED' },
             orderBy: { createdAt: 'desc' }
@@ -73,66 +76,62 @@ export const getAvailableRides = async (req: AuthRequest, res: Response) => {
 
         res.json({ rides });
     } catch (error) {
-        console.error('Get rides error:', error);
-        res.status(500).json({ error: 'Failed to fetch rides' });
+        handleControllerError(res, error, 'Failed to fetch rides');
     }
 };
 
 export const acceptRide = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
+        const rideId = req.params.id;
+
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!rideId) return res.status(400).json({ error: 'Invalid ride ID' });
 
-        const { id } = req.params;
-        const driver = await ensureDriver(userId);
+        const driver = await prisma.driverProfile.findUnique({ where: { userId } });
+        if (!driver) return res.status(404).json({ error: 'Driver profile not found' });
 
-        // Transaction to ensure ride is still available
+        // Transaction to ensure atomicity
         const ride = await prisma.$transaction(async (tx) => {
-            const targetRide = await tx.ride.findUnique({ where: { id: Number(id) } });
-
-            if (!targetRide || targetRide.status !== 'REQUESTED') {
-                throw new Error('Ride not available');
-            }
+            const r = await tx.ride.findUnique({ where: { id: rideId } });
+            if (!r) throw new Error('Ride not found');
+            if (r.status !== 'REQUESTED') throw new Error('Ride already taken or cancelled');
 
             return await tx.ride.update({
-                where: { id: Number(id) },
+                where: { id: rideId },
                 data: {
                     driverId: driver.id,
                     status: 'ACCEPTED'
+                    // startedAt is for when ride starts, not accepted
                 }
             });
         });
 
         // Notify client
-        getIO().to(`user_${ride.clientId}`).emit('ride_status_update', { status: 'ACCEPTED', ride });
+        getIO().to(`client_${ride.clientId}`).emit('ride_accepted', ride);
 
         res.json({ message: 'Ride accepted', ride });
     } catch (error: any) {
-        console.error('Accept ride error:', error);
-        res.status(400).json({ error: error.message || 'Failed to accept ride' });
+        // Custom error handling for "Ride not found" etc.
+        if (error.message === 'Ride not found' || error.message === 'Ride already taken or cancelled') {
+            return res.status(400).json({ error: error.message });
+        }
+        handleControllerError(res, error, 'Failed to accept ride');
     }
 };
 
 export const updateRideStatus = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
+        const rideId = req.params.id;
+        const { status } = req.body; // IN_PROGRESS, COMPLETED, CANCELLED
+
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!rideId) return res.status(400).json({ error: 'Invalid ride ID' });
 
-        const { id } = req.params;
-        const { status } = req.body; // IN_PROGRESS, COMPLETED
-
-        if (!['IN_PROGRESS', 'COMPLETED'].includes(status)) {
+        const validStatuses = ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+        if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
-        }
-
-        const driver = await ensureDriver(userId);
-
-        const ride = await prisma.ride.findFirst({
-            where: { id: Number(id), driverId: driver.id }
-        });
-
-        if (!ride) {
-            return res.status(404).json({ error: 'Ride not found or not assigned to you' });
         }
 
         const updateData: any = { status };
@@ -142,31 +141,21 @@ export const updateRideStatus = async (req: AuthRequest, res: Response) => {
             updateData.completedAt = new Date();
         }
 
-        const updatedRide = await prisma.ride.update({
-            where: { id: Number(id) },
+        const ride = await prisma.ride.update({
+            where: { id: rideId },
             data: updateData
         });
 
         // If completed, process payment
         if (status === 'COMPLETED') {
-            // Ensure finalPrice is set (for now assume estimatedPrice if not set, or it should be passed in body)
-            // In a real app, driver sends final meter price.
-            // Let's assume for this MVP, finalPrice = estimatedPrice if not updated.
-            if (!updatedRide.finalPrice) {
-                await prisma.ride.update({
-                    where: { id: Number(id) },
-                    data: { finalPrice: updatedRide.estimatedPrice }
-                });
-            }
-            await processPayment(Number(id));
+            await processPayment(rideId);
         }
 
         // Notify client
-        getIO().to(`user_${updatedRide.clientId}`).emit('ride_status_update', { status, ride: updatedRide });
+        getIO().to(`client_${ride.clientId}`).emit('ride_status_update', ride);
 
-        res.json({ message: 'Ride status updated', ride: updatedRide });
+        res.json({ message: 'Ride status updated', ride });
     } catch (error) {
-        console.error('Update status error:', error);
-        res.status(500).json({ error: 'Failed to update ride status' });
+        handleControllerError(res, error, 'Failed to update ride status');
     }
 };

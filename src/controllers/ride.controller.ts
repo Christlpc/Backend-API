@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { getIO } from '../socket';
+import { normalizePhone } from '../utils/phoneUtils';
+import { handleControllerError } from '../utils/errorHandler';
 
 // Haversine formula to calculate distance in km
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -23,7 +25,7 @@ function deg2rad(deg: number): number {
 
 export const estimateRide = async (req: Request, res: Response) => {
     try {
-        const { originLat, originLng, destLat, destLng, serviceType, vipTier } = req.body;
+        const { originLat, originLng, destLat, destLng, serviceType, vipTier, supplements, weatherFactor = 1.0, trafficFactor = 1.0 } = req.body;
 
         if (!originLat || !originLng || !destLat || !destLng || !serviceType) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -46,10 +48,10 @@ export const estimateRide = async (req: Request, res: Response) => {
         // Default config if not found (Seed logic should handle this, but for safety)
         if (!config) {
             const defaults: any = {
-                TAXI: { basePrice: 1000, pricePerKm: 500, pricePerMin: 50 },
-                MOTO: { basePrice: 500, pricePerKm: 300, pricePerMin: 30 },
-                CONFORT: { basePrice: 1500, pricePerKm: 700, pricePerMin: 70 },
-                VIP: { basePrice: 2500, pricePerKm: 1000, pricePerMin: 100 }
+                TAXI: { basePrice: 500, pricePerKm: 100, pricePerMin: 0 }, // Congo Defaults
+                MOTO: { basePrice: 300, pricePerKm: 50, pricePerMin: 0 },
+                CONFORT: { basePrice: 1000, pricePerKm: 200, pricePerMin: 0 },
+                VIP: { basePrice: 2000, pricePerKm: 500, pricePerMin: 0 }
             };
             const def = defaults[serviceType] || defaults.TAXI;
             config = await prisma.pricingConfig.create({
@@ -58,37 +60,46 @@ export const estimateRide = async (req: Request, res: Response) => {
                     basePrice: def.basePrice,
                     pricePerKm: def.pricePerKm,
                     pricePerMin: def.pricePerMin,
-                    fuelIndex: 1.0
+                    fuelIndex: 1.0,
+                    waitingPricePerMin: 100,
+                    freeWaitingMinutes: 5,
+                    cancellationFee: 500,
+                    minPrice: 500
                 }
             });
         }
 
         // 3. Calculate Duration (Estimate)
-        // Speed: Moto=40km/h, Others=30km/h
         const speed = serviceType === 'MOTO' ? 40 : 30;
         const durationHours = distanceKm / speed;
         const durationMin = durationHours * 60;
 
-        // 4. Traffic Factor (Simple Time-based)
-        const now = new Date();
-        const hour = now.getHours();
-        let trafficFactor = 1.0;
-        // Peak hours: 7-9 AM and 17-19 PM (5-7 PM)
-        if ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19)) {
-            trafficFactor = 1.5;
-        }
+        // 4. Calculate Price (Congo Formula)
+        // Price = Base + (Dist * Tariff * Fuel * Traffic * Weather)
+        // Note: Time is NOT charged for movement
 
-        // 5. Calculate Price
-        // Formula: Base + (km * tariff_km * fuel) + (min * tariff_min * traffic)
-        let price = config.basePrice +
-            (distanceKm * config.pricePerKm * config.fuelIndex) +
-            (durationMin * config.pricePerMin * trafficFactor);
+        const tarifDistance = distanceKm * config.pricePerKm * config.fuelIndex * trafficFactor * weatherFactor;
+        let price = config.basePrice + tarifDistance;
 
-        // 6. VIP Multiplier
+        // 5. VIP Multiplier
         if (serviceType === 'VIP' && vipTier) {
-            const multipliers: any = { 'Business': 1.6, 'Luxury': 2.2, 'XL': 2.0 };
+            const multipliers: any = { 'Business': 1.6, 'Luxury': 2.0, 'XL': 1.4 }; // Updated multipliers
             const multiplier = multipliers[vipTier] || 1.0;
             price = price * multiplier;
+        } else if (serviceType === 'CONFORT') {
+            // Example mapping if needed, or rely on base price
+        }
+
+        // 6. Supplements
+        if (supplements) {
+            if (supplements.meetAndGreet) price += 2000;
+            if (supplements.babySeat) price += 1000;
+            if (supplements.extraLuggage) price += 1000;
+        }
+
+        // 7. Minimum Price (Plancher)
+        if (price < config.minPrice) {
+            price = config.minPrice;
         }
 
         // Round to nearest 100
@@ -98,12 +109,23 @@ export const estimateRide = async (req: Request, res: Response) => {
             distance: distanceKm.toFixed(2),
             duration: Math.ceil(durationMin),
             estimatedPrice: price,
-            currency: 'XAF'
+            currency: 'XAF',
+            breakdown: {
+                base: config.basePrice,
+                distancePrice: tarifDistance,
+                timePrice: 0, // Not charged in this model
+                factors: {
+                    fuel: config.fuelIndex,
+                    traffic: trafficFactor,
+                    weather: weatherFactor
+                },
+                supplements: supplements ? 'Included' : 'None',
+                vipMultiplier: (serviceType === 'VIP' && vipTier) ? vipTier : 'None'
+            }
         });
 
     } catch (error) {
-        console.error('Estimate error:', error);
-        res.status(500).json({ error: 'Estimation failed' });
+        handleControllerError(res, error, 'Estimation failed');
     }
 };
 
@@ -114,7 +136,8 @@ export const requestRide = async (req: AuthRequest, res: Response) => {
             destLat, destLng, destAddress,
             serviceType, estimatedPrice,
             passengerName, passengerPhone, scheduledTime,
-            paymentMethod, vipTier
+            paymentMethod, vipTier, supplements, billTo,
+            weatherFactor = 1.0, trafficFactor = 1.0
         } = req.body;
         const userId = req.user?.userId;
 
@@ -132,6 +155,10 @@ export const requestRide = async (req: AuthRequest, res: Response) => {
 
         const status = scheduledTime ? 'SCHEDULED' : 'REQUESTED';
 
+        // Fetch config to get current fuel index
+        const config = await prisma.pricingConfig.findUnique({ where: { serviceType } });
+        const fuelIndex = config?.fuelIndex || 1.0;
+
         const ride = await prisma.ride.create({
             data: {
                 clientId: userId,
@@ -145,19 +172,23 @@ export const requestRide = async (req: AuthRequest, res: Response) => {
                 estimatedPrice,
                 status,
                 passengerName,
-                passengerPhone,
+                passengerPhone: passengerPhone ? normalizePhone(passengerPhone) : null,
                 scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
                 paymentMethod,
-                vipTier
+                vipTier,
+                supplements: supplements || undefined,
+                billTo: billTo || 'CLIENT',
+                weatherFactor,
+                trafficFactor,
+                fuelIndex
             }
         });
 
-        // Notify all drivers (only if not scheduled for far future, but for now notify anyway)
+        // Notify all drivers
         getIO().to('drivers').emit('new_ride_request', ride);
 
         res.status(201).json({ message: 'Ride requested successfully', ride });
     } catch (error) {
-        console.error('Ride request error:', error);
-        res.status(500).json({ error: 'Ride request failed' });
+        handleControllerError(res, error, 'Ride request failed');
     }
 };
