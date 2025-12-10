@@ -7,7 +7,7 @@
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "npm run build:api",
-    "build:api": "npx prisma generate && tsc",
+    "build:api": "npx prisma generate && npx prisma migrate deploy && tsc",
     "build:docs": "cd documentation && npm install && npm run build",
     "build:full": "npm run build:docs && npm run build:api",
     "postinstall": "npx prisma generate",
