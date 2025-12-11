@@ -61,6 +61,10 @@ model User {
   emergencyContacts EmergencyContact[]
   wallet        Wallet?
   savedAddresses SavedAddress[]
+
+  // Referral System
+  referralCode  String?   @unique  // Code unique de parrainage
+  referredBy    String?             // ID du parrain
 }
 
 model DriverProfile {
@@ -304,4 +308,82 @@ model RatingConfig {
   autoSuspendThreshold Int      @default(5)    // X bad ratings = SUSPENDED
   evaluationPeriod     Int      @default(10)   // Last X rides to evaluate
   updatedAt            DateTime @updatedAt
+}
+
+// ============================================
+// PROMO CODE SYSTEM
+// ============================================
+
+// Code Promo (créé depuis le backoffice)
+model PromoCode {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  description   String?
+  
+  // Type de réduction
+  discountType  String    // PERCENTAGE or FIXED
+  discountValue Float     // Valeur (ex: 10 pour 10% ou 500 pour 500 XAF)
+  
+  // Limites
+  maxUses       Int?      // Nombre max d'utilisations (null = illimité)
+  usedCount     Int       @default(0)
+  maxUsesPerUser Int      @default(1)
+  minRideAmount Float?    // Montant minimum de course
+  
+  // Validité
+  isActive      Boolean   @default(true)
+  startsAt      DateTime  @default(now())
+  expiresAt     DateTime?
+  
+  // Restrictions
+  serviceTypes  String[]  // Types de service éligibles (vide = tous)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  usages        PromoCodeUsage[]
+}
+
+// Historique d'utilisation des codes promo
+model PromoCodeUsage {
+  id              String    @id @default(cuid())
+  promoCodeId     String
+  promoCode       PromoCode @relation(fields: [promoCodeId], references: [id])
+  userId          String
+  rideId          String?
+  discountApplied Float
+  createdAt       DateTime  @default(now())
+  
+  @@unique([promoCodeId, userId, rideId])
+}
+
+// ============================================
+// REFERRAL SYSTEM
+// ============================================
+
+// Historique des parrainages
+model Referral {
+  id          String    @id @default(cuid())
+  referrerId  String    // Le parrain
+  refereeId   String    @unique // Le filleul (un filleul ne peut avoir qu'un parrain)
+  
+  status      String    @default("PENDING") // PENDING, COMPLETED, EXPIRED
+  
+  // Bonus accordés
+  referrerBonus Float   @default(0)
+  refereeBonus  Float   @default(0)
+  bonusPaidAt   DateTime?
+  
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
+
+// Configuration du parrainage (modifiable par admin)
+model ReferralConfig {
+  id               String   @id @default(cuid())
+  referrerBonus    Float    @default(500)  // Bonus parrain en XAF
+  refereeBonus     Float    @default(500)  // Bonus filleul en XAF
+  minRidesForBonus Int      @default(1)    // Courses min pour débloquer bonus
+  isActive         Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
 }

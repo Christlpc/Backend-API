@@ -10,6 +10,8 @@ import * as statsController from '../controllers/stats.controller';
 import * as backofficeController from '../controllers/backoffice.controller';
 import * as driverOnboardingController from '../controllers/driver-onboarding.controller';
 import * as ratingController from '../controllers/rating.controller';
+import * as promoController from '../controllers/promo.controller';
+import * as referralController from '../controllers/referral.controller';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { isAdmin } from '../middleware/admin.middleware';
 
@@ -76,6 +78,23 @@ router.get('/stats/driver', authenticate, statsController.getDriverStats);
 router.get('/stats/client', authenticate, statsController.getClientStats);
 
 // ============================================
+// PROMO CODE ROUTES
+// ============================================
+
+// Client routes
+router.post('/promo/validate', authenticate, promoController.validatePromoCode);
+router.post('/promo/apply', authenticate, promoController.applyPromoCode);
+
+// ============================================
+// REFERRAL ROUTES
+// ============================================
+
+// User routes
+router.get('/referral/my-code', authenticate, referralController.getMyReferralCode);
+router.post('/referral/apply', authenticate, referralController.applyReferralCode);
+router.get('/referral/my-referrals', authenticate, referralController.getMyReferrals);
+
+// ============================================
 // BACKOFFICE ROUTES (Admin Only)
 // ============================================
 
@@ -119,4 +138,19 @@ router.patch('/backoffice/rides/:id/cancel', authenticate, isAdmin, backofficeCo
 router.get('/backoffice/transactions', authenticate, isAdmin, backofficeController.getAllTransactions);
 router.get('/backoffice/transactions/:id', authenticate, isAdmin, backofficeController.getTransactionDetails);
 
+// Promo Code Management (Admin)
+router.get('/backoffice/promo-codes', authenticate, isAdmin, promoController.getAllPromoCodes);
+router.post('/backoffice/promo-codes', authenticate, isAdmin, promoController.createPromoCode);
+router.get('/backoffice/promo-codes/:id', authenticate, isAdmin, promoController.getPromoCodeById);
+router.put('/backoffice/promo-codes/:id', authenticate, isAdmin, promoController.updatePromoCode);
+router.patch('/backoffice/promo-codes/:id/toggle', authenticate, isAdmin, promoController.togglePromoCode);
+router.delete('/backoffice/promo-codes/:id', authenticate, isAdmin, promoController.deletePromoCode);
+router.get('/backoffice/promo-codes/:id/stats', authenticate, isAdmin, promoController.getPromoCodeStats);
+
+// Referral Management (Admin)
+router.get('/backoffice/referrals', authenticate, isAdmin, referralController.getReferralStats);
+router.get('/backoffice/referrals/config', authenticate, isAdmin, referralController.getReferralConfig);
+router.put('/backoffice/referrals/config', authenticate, isAdmin, referralController.updateReferralConfig);
+
 export default router;
+

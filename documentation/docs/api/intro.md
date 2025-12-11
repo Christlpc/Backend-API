@@ -39,12 +39,19 @@ This API powers the Afrigo ride-hailing platform, providing comprehensive endpoi
 - **Driver Stats** - Earnings, rides completed, average duration
 - **Client Stats** - Total spent, rides taken, history
 
+### Promo Codes & Referral
+- **Promo Codes** - Create discount codes from backoffice (% or fixed amount)
+- **Referral System** - Unique referral codes with wallet bonuses
+- **Usage Tracking** - Statistics and limits per user
+
 ### Administration (Backoffice)
 - **User Management** - CRUD, status toggle, role changes
 - **Driver Management** - Approval, suspension, monitoring
 - **Document Review** - Validate driver documents
 - **Platform Stats** - Revenue, active drivers, ride metrics
 - **Rating Management** - Red zone users, reputation reset, config
+- **Promo Management** - Create, edit, track promo codes
+- **Referral Config** - Set bonus amounts and rules
 
 ## Getting Started
 
@@ -66,6 +73,8 @@ Authorization: Bearer <your_jwt_token>
 | [Addresses](/api/addresses) | Saved locations |
 | [Statistics](/api/statistics) | Performance analytics |
 | [Support & Safety](/api/support-safety) | Tickets, SOS |
+| [Promo Codes](/api/promo-codes) | Discounts and promotions |
+| [Referral](/api/referral) | Referral system and bonuses |
 | [Backoffice](/api/backoffice) | Admin-only management |
 
 ## Authentication
