@@ -12,6 +12,7 @@ import * as driverOnboardingController from '../controllers/driver-onboarding.co
 import * as ratingController from '../controllers/rating.controller';
 import * as promoController from '../controllers/promo.controller';
 import * as referralController from '../controllers/referral.controller';
+import * as notificationController from '../controllers/notification.controller';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { isAdmin } from '../middleware/admin.middleware';
 
@@ -95,6 +96,18 @@ router.post('/referral/apply', authenticate, referralController.applyReferralCod
 router.get('/referral/my-referrals', authenticate, referralController.getMyReferrals);
 
 // ============================================
+// NOTIFICATION ROUTES
+// ============================================
+
+router.post('/notifications/register-token', authenticate, notificationController.registerFcmToken);
+router.delete('/notifications/unregister-token', authenticate, notificationController.unregisterFcmToken);
+router.get('/notifications', authenticate, notificationController.getNotifications);
+router.get('/notifications/unread-count', authenticate, notificationController.getUnreadCount);
+router.patch('/notifications/:id/read', authenticate, notificationController.markAsRead);
+router.patch('/notifications/read-all', authenticate, notificationController.markAllAsRead);
+router.delete('/notifications/old', authenticate, notificationController.deleteOldNotifications);
+
+// ============================================
 // BACKOFFICE ROUTES (Admin Only)
 // ============================================
 
@@ -152,5 +165,8 @@ router.get('/backoffice/referrals', authenticate, isAdmin, referralController.ge
 router.get('/backoffice/referrals/config', authenticate, isAdmin, referralController.getReferralConfig);
 router.put('/backoffice/referrals/config', authenticate, isAdmin, referralController.updateReferralConfig);
 
-export default router;
+// Notification Management (Admin)
+router.post('/backoffice/notifications/send', authenticate, isAdmin, notificationController.sendNotificationToUser);
+router.post('/backoffice/notifications/broadcast', authenticate, isAdmin, notificationController.sendBroadcastNotification);
 
+export default router;

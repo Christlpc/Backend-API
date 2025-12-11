@@ -65,6 +65,10 @@ model User {
   // Referral System
   referralCode  String?   @unique  // Code unique de parrainage
   referredBy    String?             // ID du parrain
+
+  // Push Notifications
+  fcmToken      String?   // Firebase Cloud Messaging token
+  notifications Notification[]
 }
 
 model DriverProfile {
@@ -386,4 +390,26 @@ model ReferralConfig {
   minRidesForBonus Int      @default(1)    // Courses min pour débloquer bonus
   isActive         Boolean  @default(true)
   updatedAt        DateTime @updatedAt
+}
+
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  title       String
+  body        String
+  data        Json?    // Additional data (rideId, amount, etc.)
+  
+  type        String   // RIDE, PROMO, REFERRAL, DOCUMENT, PAYMENT, SYSTEM
+  isRead      Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }

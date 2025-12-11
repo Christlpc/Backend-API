@@ -3,6 +3,8 @@ import prisma from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { getIO } from '../socket';
 import { processPayment } from './payment.controller';
+import { handleControllerError } from '../utils/errorHandler';
+import * as notificationService from '../services/notification.service';
 
 // Helper to ensure user is a driver
 const ensureDriver = async (userId: string) => {
@@ -17,8 +19,6 @@ const ensureDriver = async (userId: string) => {
     }
     return driver;
 };
-
-import { handleControllerError } from '../utils/errorHandler';
 
 export const toggleAvailability = async (req: AuthRequest, res: Response) => {
     try {
@@ -52,7 +52,6 @@ export const updateLocation = async (req: AuthRequest, res: Response) => {
             data: {
                 currentLat: latitude,
                 currentLng: longitude
-                // lastLocationUpdate not in schema, removing
             }
         });
 
@@ -88,7 +87,10 @@ export const acceptRide = async (req: AuthRequest, res: Response) => {
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
         if (!rideId) return res.status(400).json({ error: 'Invalid ride ID' });
 
-        const driver = await prisma.driverProfile.findUnique({ where: { userId } });
+        const driver = await prisma.driverProfile.findUnique({
+            where: { userId },
+            include: { user: { select: { firstName: true } } }
+        });
         if (!driver) return res.status(404).json({ error: 'Driver profile not found' });
 
         // Transaction to ensure atomicity
@@ -102,17 +104,19 @@ export const acceptRide = async (req: AuthRequest, res: Response) => {
                 data: {
                     driverId: driver.id,
                     status: 'ACCEPTED'
-                    // startedAt is for when ride starts, not accepted
                 }
             });
         });
 
-        // Notify client
-        getIO().to(`client_${ride.clientId}`).emit('ride_accepted', ride);
+        // Notify client via Socket.IO
+        getIO().to(`user_${ride.clientId}`).emit('ride_accepted', ride);
+
+        // Send push notification to client
+        const driverName = driver.user.firstName || 'Votre chauffeur';
+        await notificationService.notifyRideAccepted(ride.clientId, driverName);
 
         res.json({ message: 'Ride accepted', ride });
     } catch (error: any) {
-        // Custom error handling for "Ride not found" etc.
         if (error.message === 'Ride not found' || error.message === 'Ride already taken or cancelled') {
             return res.status(400).json({ error: error.message });
         }
@@ -124,15 +128,22 @@ export const updateRideStatus = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
         const rideId = req.params.id;
-        const { status } = req.body; // IN_PROGRESS, COMPLETED, CANCELLED
+        const { status } = req.body; // ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
         if (!rideId) return res.status(400).json({ error: 'Invalid ride ID' });
 
-        const validStatuses = ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+        const validStatuses = ['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
+
+        // Get current ride for driver info
+        const currentRide = await prisma.ride.findUnique({
+            where: { id: rideId },
+            include: { driver: true }
+        });
+        if (!currentRide) return res.status(404).json({ error: 'Ride not found' });
 
         const updateData: any = { status };
         if (status === 'IN_PROGRESS') {
@@ -146,13 +157,35 @@ export const updateRideStatus = async (req: AuthRequest, res: Response) => {
             data: updateData
         });
 
-        // If completed, process payment
-        if (status === 'COMPLETED') {
-            await processPayment(rideId);
-        }
+        // Notify via Socket.IO
+        getIO().to(`user_${ride.clientId}`).emit('ride_status_update', ride);
 
-        // Notify client
-        getIO().to(`client_${ride.clientId}`).emit('ride_status_update', ride);
+        // Send push notifications based on status
+        switch (status) {
+            case 'ARRIVED':
+                await notificationService.notifyDriverArrived(ride.clientId);
+                break;
+            case 'IN_PROGRESS':
+                await notificationService.notifyRideStarted(ride.clientId);
+                break;
+            case 'COMPLETED':
+                const finalAmount = ride.finalPrice || ride.estimatedPrice;
+                // Notify client
+                await notificationService.notifyRideCompleted(ride.clientId, finalAmount, false);
+                // Notify driver
+                if (currentRide.driver?.userId) {
+                    await notificationService.notifyRideCompleted(currentRide.driver.userId, finalAmount, true);
+                }
+                // Process payment
+                await processPayment(rideId);
+                break;
+            case 'CANCELLED':
+                // Notify driver that client cancelled
+                if (currentRide.driver?.userId) {
+                    await notificationService.notifyRideCancelled(currentRide.driver.userId);
+                }
+                break;
+        }
 
         res.json({ message: 'Ride status updated', ride });
     } catch (error) {

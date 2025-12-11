@@ -75,6 +75,7 @@ Authorization: Bearer <your_jwt_token>
 | [Support & Safety](/api/support-safety) | Tickets, SOS |
 | [Promo Codes](/api/promo-codes) | Discounts and promotions |
 | [Referral](/api/referral) | Referral system and bonuses |
+| [Notifications](/api/notifications) | Push and in-app notifications |
 | [Backoffice](/api/backoffice) | Admin-only management |
 
 ## Authentication
